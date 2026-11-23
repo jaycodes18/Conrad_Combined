@@ -1,0 +1,43 @@
+{
+  "name": "conrad-challenge-app",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --go",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
+    "postinstall": "node scripts/prepare-assets.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.32",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "2.119.0",
+    "expo": "~58.0.26",
+    "expo-asset": "~58.0.21",
+    "expo-audio": "~58.0.12",
+    "expo-camera": "~58.0.14",
+    "expo-crypto": "~58.0.8",
+    "expo-file-system": "~58.0.14",
+    "expo-keep-awake": "~58.0.4",
+    "expo-location": "~58.0.22",
+    "expo-secure-store": "~58.0.3",
+    "expo-sms": "~58.0.3",
+    "expo-speech": "~58.0.4",
+    "leaflet": "1.9.4",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-url-polyfill": "4.0.0",
+    "react-native-webview": "14.0.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  }
+}

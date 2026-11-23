@@ -1,0 +1,44 @@
+{
+  "name": "Driven", "version": 1, "contact_email": "",
+  "flags": {
+    "auto_call_911": false, "require_contact_consent": true, "driver_input_while_moving": false,
+    "record_audio": false, "require_biometric_consent": true, "upload_face_data": false,
+    "sell_personal_data": false, "tx_under18_device": "no_sim_device", "legal_opinion_tx_under18": false,
+    "studio_research_audio": false, "legal_opinion_studio_audio": false
+  },
+  "plans": [
+    {"id": "pilot", "name": "Pilot", "price_usd_month": 0, "parent_sms": true,
+     "summary": "Free for the first DFW families while we tune the model with them.",
+     "features": ["In-car spoken alerts", "Parent text alerts", "Drive history"]},
+    {"id": "family", "name": "Family", "price_usd_month": 9.99, "parent_sms": true,
+     "summary": "One teen driver, up to two parent or emergency contacts.",
+     "features": ["In-car spoken alerts", "Parent text alerts", "Drive history", "Weekly drive summary"]},
+    {"id": "free", "name": "In-car only", "price_usd_month": 0, "parent_sms": false,
+     "summary": "Spoken alerts in the car. No parent texts or history.", "features": ["In-car spoken alerts"]},
+    {"id": "partner", "name": "Partners", "price_usd_month": null, "parent_sms": true,
+     "summary": "Dashcam makers, insurers and driver-education programs: licensing and pilots.",
+     "features": ["Model licensing", "Aggregate, opt-in safety reports", "Co-branded app"]}
+  ],
+  "notify": {"drowsy_sms": true, "eyes_off_sms": false, "min_gap_s": 600,
+             "max_sms_per_driver_per_day": 6, "stale_event_s": 1800},
+  "escalation": {"tier1_min_level": "elevated", "tier2_impairment_level": "high",
+                 "tier3_condition": "possible_unresponsiveness", "tier3_hold_s": 10, "episode_end_s": 30},
+  "costs": {
+    "sms_segment_usd": 0.0083, "sms_carrier_fee_usd": 0.005, "phone_number_usd_month": 1.15,
+    "supabase_pro_usd_month": 25, "cloudflare_pages_usd_month": 0, "stripe_pct": 0.029, "stripe_fixed_usd": 0.3,
+    "sources": {
+      "sms_segment_usd": "https://www.twilio.com/en-us/sms/pricing/usa",
+      "sms_carrier_fee_usd": "https://textbee.dev/blog/twilio-pricing-real-cost-breakdown (upper end of the $0.0035-$0.005 carrier fee range)",
+      "phone_number_usd_month": "https://www.saaspricepulse.com/tools/twilio",
+      "supabase_pro_usd_month": "https://supabase.com/pricing",
+      "cloudflare_pages_usd_month": "https://pages.cloudflare.com/ (free plan)",
+      "stripe_pct": "https://stripe.com/us/pricing",
+      "stripe_fixed_usd": "https://stripe.com/us/pricing"
+    }
+  },
+  "assumptions": {"drive_hours_per_month": 20, "true_drowsy_alerts_per_drive_hour": 0.1,
+                  "confirmed_contacts_per_family": 2, "segments_per_sms": 1, "paying_families": 50,
+                  "note": "Team estimates for planning. Replace each with the measured pilot value; the economics report prints which ones are still estimates."},
+  "targets": {"min_contribution_margin": 0.6},
+  "billing": {"stripe_payment_link": ""}
+}

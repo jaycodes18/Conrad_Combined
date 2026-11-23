@@ -1,0 +1,19 @@
+# Python and tool caches
+__pycache__/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+ml/notebooks/.ipynb_checkpoints/
+
+# Pipeline workspaces and derived data
+driven_work/
+*.parquet
+
+# Face video and consent files are biometric records (Tex. Bus. & Com. Code 503.001). They never enter git.
+recordings/
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[aA][vV][iI]
+*.[mM][kK][vV]

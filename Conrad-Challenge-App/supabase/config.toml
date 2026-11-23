@@ -1,0 +1,4 @@
+project_id = "conrad-driver-monitor"
+
+[functions.delete-account]
+verify_jwt = true

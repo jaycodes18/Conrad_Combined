@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driven Studio</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --ink: #1d2330; --muted: #5d6676; --line: #e3e6eb; --blue: #2f6fd6;
+    --none: #8a93a3; --low: #2f6fd6; --elevated: #d9822b; --high: #d14343; --ok: #2e9b5f; --grey: #c3c8d0;
+    font-family: Calibri, "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 14px; }
+  header { display: flex; align-items: center; gap: 20px; padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 18px; margin: 0; }
+  nav button { border: 0; background: none; padding: 8px 12px; font: inherit; color: var(--muted); cursor: pointer; border-radius: 6px; }
+  nav button.on { background: #e9effb; color: var(--blue); font-weight: 600; }
+  #modelTag { margin-left: auto; color: var(--muted); font-size: 13px; }
+  main { padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
+  .tab { display: none; } .tab.on { display: block; }
+  .cols { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .card h2 { font-size: 14px; margin: 0 0 8px; }
+  .note { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  .strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  input, select { font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  button.act, button.ghost { font: inherit; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+  button.act { border: 1px solid var(--blue); background: var(--blue); color: #fff; }
+  button.ghost { border: 1px solid var(--line); background: #fff; }
+  #video { width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #1c1f26; border-radius: 8px; display: block; }
+  .coverage { display: flex; gap: 4px; margin-top: 6px; }
+  .coverage span { flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 4px; color: #fff; }
+  .available { background: var(--ok); } .degraded { background: var(--elevated); } .unavailable { background: var(--grey); }
+  #condition { font-size: 28px; font-weight: 700; text-transform: capitalize; }
+  .lvl-none { color: var(--none); } .lvl-low { color: var(--low); } .lvl-elevated { color: var(--elevated); } .lvl-high { color: var(--high); }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .ind { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .ind .name { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+  .ind .state { font-weight: 600; margin: 2px 0; overflow-wrap: anywhere; }
+  .ind.off .state, .ind.off .value { color: var(--none); font-weight: 400; }
+  .bar { height: 5px; background: var(--line); border-radius: 3px; margin-top: 5px; } .bar i { display: block; height: 100%; background: var(--blue); border-radius: 3px; }
+  .ladder { display: flex; gap: 6px; } .ladder div { flex: 1; text-align: center; padding: 6px 0; border-radius: 6px; background: #eef0f3; color: var(--muted); font-size: 12px; }
+  .ladder div.lit { background: var(--high); color: #fff; font-weight: 600; } .ladder div.lit.t1 { background: var(--elevated); } .ladder div.lit.t0 { background: var(--ok); }
+  pre { background: #1c1f26; color: #d9dee7; border-radius: 8px; padding: 10px; font-size: 11.5px; max-height: 340px; overflow: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); } th { color: var(--muted); font-weight: 600; }
+  .pass { color: var(--ok); font-weight: 600; } .fail { color: var(--high); font-weight: 600; } .notrun { color: var(--none); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 3px 10px; border-radius: 999px; background: #eef0f3; color: var(--muted); font-size: 12px; }
+  .chip.running { background: #e9effb; color: var(--blue); } .chip.done { background: #e7f5ec; color: var(--ok); } .chip.failed { background: #fbeaea; color: var(--high); }
+  .log { font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #1c1f26; color: #d9dee7; border-radius: 8px; padding: 8px; height: 200px; overflow: auto; white-space: pre-wrap; }
+  #drawer { position: fixed; top: 0; right: 0; width: 380px; max-width: 100%; height: 100%; background: var(--card); border-left: 1px solid var(--line); padding: 16px; overflow: auto; transform: translateX(100%); transition: transform 0.2s; }
+  #drawer.open { transform: none; }
+  @media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Driven Studio</h1>
+  <nav><button data-tab="drive" class="on">Drive</button><button data-tab="test">Test</button><button data-tab="train">Train</button></nav>
+  <span id="modelTag">No model loaded</span>
+</header>
+<main>
+<section id="drive" class="tab on">
+  <div class="cols">
+    <div>
+      <div class="card">
+        <div class="strip">
+          <input id="source" list="sources" value="synthetic" title="0 = webcam, rtsp://…, http://…, a file, or synthetic">
+          <datalist id="sources"><option value="synthetic"><option value="0"><option value="1"></datalist>
+          <button class="act" id="start">Start</button><button class="ghost" id="stop">Stop</button>
+          <button class="ghost" id="recal">Recalibrate</button>
+          <label><input type="checkbox" id="driving" checked> Driving</label>
+          <button class="ghost" id="openDrawer">Contacts</button>
+          <span id="liveStatus" class="note"></span>
+        </div>
+        <img id="video" src="/stream.mjpg" alt="camera stream">
+        <div class="coverage" id="coverage"></div>
+        <p class="note" id="framenote">Waiting for frames.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div id="condition" class="lvl-none">none</div>
+        <div><span id="level">level none</span> · score <span id="score">0.00</span> · confidence <span id="confidence">0.00</span></div>
+        <p class="note" id="reasons"></p>
+        <p class="note" id="degraded"></p>
+        <p class="note" id="disclaimer"></p>
+      </div>
+      <div class="card"><h2>Indicators</h2><div class="cards" id="indicators"></div></div>
+      <div class="card">
+        <h2>Escalation</h2>
+        <div class="ladder" id="ladder"><div class="t0">Tier 0</div><div class="t1">Tier 1 · in-car alert</div><div class="t2">Tier 2 · text</div><div class="t3">Tier 3 · call</div></div>
+        <p class="note" id="countdown"></p>
+        <p id="actions"></p>
+        <p class="note" id="escReason"></p>
+        <p class="note">Emergency services are never contacted automatically (47 CFR 64.1200). Nothing here sends a text or places a call.</p>
+      </div>
+      <details class="card"><summary>Signal JSON (what the app receives)</summary>
+        <button class="ghost" id="copy">Copy</button><pre id="signal">{}</pre></details>
+    </div>
+  </div>
+</section>
+
+<section id="test" class="tab">
+  <div class="cols">
+    <div class="card">
+      <h2>Scripted condition suite</h2>
+      <p class="note">Each condition runs the scripted session through indicators, fusion and escalation on synthetic frames and synthetic audio. These are modelled conditions, not cabin recordings.</p>
+      <div class="strip" id="condPick"></div>
+      <div class="strip" id="eventPick"></div>
+      <button class="act" id="runScripted">Run</button>
+    </div>
+    <div class="card">
+      <h2>Captured frames and scenario lab</h2>
+      <div class="strip">
+        <button class="ghost" id="capOpen">Capture eyes open (4 s)</button><button class="ghost" id="capClosed">Capture eyes closed (4 s)</button>
+        <button class="ghost" id="capClear">Clear</button><span id="capCount" class="note"></span>
+      </div>
+      <div class="strip">
+        <button class="ghost" id="runConditions">Image conditions</button><button class="ghost" id="runVision">Vision scenarios</button>
+        <button class="ghost" id="runAudio">Audio scenarios</button><span id="testStatus" class="note"></span>
+      </div>
+      <p class="note">Image conditions and vision scenarios need captured frames from a camera. Audio scenarios use synthetic PCM only.</p>
+    </div>
+  </div>
+  <div class="card"><h2>Results</h2>
+    <table><thead><tr><th>Condition or source</th><th>Event</th><th>Detected</th><th>Latency (s)</th><th>False alarms</th><th>Verdict</th><th>Detail</th></tr></thead><tbody id="results"></tbody></table>
+  </div>
+</section>
+
+<section id="train" class="tab">
+  <div class="card">
+    <div class="strip">
+      <select id="env"><option>dev</option><option>train</option><option>validate</option><option>test</option><option>staging</option></select>
+      <select id="track"><option>research</option><option>commercial</option></select>
+      <button class="act" id="trainStart">Train</button><span id="trainStatus" class="note"></span>
+    </div>
+    <div class="chips" id="stages"></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h2>Validation (person-grouped, out of fold)</h2>
+      <p class="note" id="masked">Eyes-masked metrics appear after the train stage.</p>
+      <table><thead><tr><th>Model</th><th>AUC</th><th>AUC, eyes masked</th><th>Bal. acc.</th><th>Bal. acc., eyes masked</th><th>False alerts/h</th></tr></thead><tbody id="validation"></tbody></table>
+    </div>
+    <div class="card"><h2>Held-out AUC by epoch (display models)</h2><svg id="epochs" viewBox="0 0 400 160" width="100%" height="160"></svg><p class="note" id="testNote"></p></div>
+  </div>
+  <div class="card"><h2>Log</h2><div class="log" id="log"></div></div>
+</section>
+</main>
+
+<aside id="drawer">
+  <div class="strip"><h2 style="margin:0">Contacts and consent</h2><button class="ghost" id="closeDrawer">Close</button></div>
+  <p class="note">Texts go only to contacts with recorded consent. A voice call is recommended only for a contact whose consent covers automated calls.</p>
+  <table><thead><tr><th>Name</th><th>Phone</th><th>Consent</th><th>Calls</th></tr></thead><tbody id="contacts"></tbody></table>
+  <div class="strip" style="margin-top:10px">
+    <input id="cName" placeholder="Name"><input id="cPhone" placeholder="+12145550100">
+    <input id="cDate" placeholder="consent date YYYY-MM-DD">
+    <label><input type="checkbox" id="cCalls"> consents to calls</label>
+    <button class="act" id="cAdd">Add</button>
+  </div>
+  <h2>Escalation log</h2><div class="log" id="escLog" style="height:160px"></div>
+  <h2>Research microphone</h2><p class="note" id="mic"></p>
+  <div class="strip"><button class="ghost" id="micStart">Start microphone</button><button class="ghost" id="micStop">Stop</button></div>
+</aside>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const post = (path, body = {}) => fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+const fmt = (v, d = 2) => (v === null || v === undefined || Number.isNaN(v) ? "—" : Number(v).toFixed(d));
+const el = (tag, text, cls) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (cls) node.className = cls; return node; };
+const UNITS = { eyes: "s closed", ocular: "instability", head: "", breathing: "breaths/min", responsiveness: "s", sensor_quality: "available" };
+const INDICATORS = ["eyes", "ocular", "head", "breathing", "responsiveness", "sensor_quality"];
+let latched = { notify: false, voice: false };
+let results = [];
+
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.id === b.dataset.tab));
+});
+
+// ---- Drive ---------------------------------------------------------------------------------------------
+function renderSignal(s) {
+  $("signal").textContent = JSON.stringify(s, null, 2);
+  const cond = $("condition");
+  cond.textContent = s.condition.replace(/_/g, " ");
+  cond.className = "lvl-" + s.level;
+  $("level").textContent = "level " + s.level;
+  $("score").textContent = fmt(s.score);
+  $("confidence").textContent = fmt(s.confidence);
+  $("reasons").textContent = (s.condition === "none" ? [] : [...new Set(Object.values(s.indicators).flatMap((i) => i.severity > 0 ? i.evidence : []))]).slice(0, 3).join(" ");
+  $("degraded").textContent = s.monitoring_degraded.active ? "Monitoring degraded: " + s.monitoring_degraded.situations.join(", ").replace(/_/g, " ") : "";
+  $("disclaimer").textContent = s.disclaimer;
+  const grid = $("indicators");
+  grid.replaceChildren(...INDICATORS.map((name) => {
+    const i = s.indicators[name];
+    const card = el("div", undefined, "ind" + (i.available ? "" : " off"));
+    card.append(el("div", name.replace("_", " "), "name"));
+    card.append(el("div", i.available ? i.state.replace(/_/g, " ") : "unavailable: " + (i.unavailable_reason || "").replace(/_/g, " "), "state"));
+    card.append(el("div", i.value === null ? "—" : `${fmt(i.value, 1)} ${UNITS[name]}`, "value note"));
+    const bar = el("div", undefined, "bar"); const fill = el("i"); fill.style.width = `${Math.round(i.confidence * 100)}%`; bar.append(fill); card.append(bar);
+    card.title = i.evidence.join(" ");
+    return card;
+  }));
+  $("coverage").replaceChildren(...Object.entries(s.coverage).map(([name, state]) => el("span", name, state)));
+  const e = s.escalation;
+  [...$("ladder").children].forEach((d, tier) => d.classList.toggle("lit", tier <= e.tier && (tier > 0 || e.tier === 0)));
+  if (e.tier === 0) latched = { notify: false, voice: false };
+  if (e.notify_contacts) latched.notify = true;
+  if (e.voice_call_recommended) latched.voice = true;
+  const lines = [];
+  if (latched.notify) lines.push("Contacts would be texted with precise location.");
+  if (latched.voice) lines.push("Voice call would be recommended.");
+  $("actions").textContent = lines.join(" ");
+  $("escReason").textContent = e.reason;
+  const r = s.indicators.responsiveness;
+  $("countdown").textContent = e.responsiveness_check === "waiting" && r.value !== null ? `Response check: ${fmt(Math.max(0, 5 - r.value), 1)} s left` : `Response check: ${e.responsiveness_check.replace("_", " ")}`;
+}
+
+const logLine = (box, text) => { const node = $(box); node.textContent += text + "\n"; node.scrollTop = node.scrollHeight; };
+
+function renderContacts(list) {
+  $("contacts").replaceChildren(...list.map((c) => {
+    const tr = el("tr");
+    [c.display_name, c.phone_masked, c.consent + (c.consent_date ? ` (${c.consent_date})` : ""), c.calls_consented ? "yes" : "no"].forEach((v) => tr.append(el("td", v)));
+    return tr;
+  }));
+}
+
+function renderMic(m) {
+  $("mic").textContent = m.allowed ? (m.running ? "Running. Audio is analyzed in memory and never stored." : "Allowed; not running.") : "Blocked: " + m.block_reason;
+  $("micStart").disabled = !m.allowed;
+}
+
+$("start").onclick = () => post("/api/live/start", { source: $("source").value, speed: 1 });
+$("stop").onclick = () => post("/api/live/stop");
+$("recal").onclick = () => post("/api/live/recalibrate");
+$("driving").onchange = () => post("/api/live/driving", { on: $("driving").checked });
+$("openDrawer").onclick = () => $("drawer").classList.add("open");
+$("closeDrawer").onclick = () => $("drawer").classList.remove("open");
+$("copy").onclick = () => navigator.clipboard.writeText($("signal").textContent);
+$("cAdd").onclick = async () => {
+  const name = $("cName").value.trim();
+  const date = $("cDate").value.trim();
+  const reply = await post("/api/contacts/add", {
+    contact_id: name.toLowerCase().replace(/\W+/g, "-") || "contact", display_name: name, phone_e164: $("cPhone").value.trim(),
+    consent: date ? "recorded" : "missing", consent_date: date, calls_consented: $("cCalls").checked,
+  });
+  if (!reply.ok) alert(reply.error);
+  refreshState();
+};
+$("micStart").onclick = () => post("/api/microphone/start").then((r) => r.ok ? renderMic(r.microphone) : alert(r.error));
+$("micStop").onclick = () => post("/api/microphone/stop").then((r) => r.microphone && renderMic(r.microphone));
+
+// ---- Test ----------------------------------------------------------------------------------------------
+function renderResults() {
+  $("results").replaceChildren(...results.map((row) => {
+    const tr = el("tr");
+    const verdict = row.verdict;
+    [row.condition, row.event, row.detected === null ? "—" : row.detected ? "yes" : "no", fmt(row.latency_seconds, 1), row.false_alarms ?? "—"].forEach((v) => tr.append(el("td", String(v))));
+    tr.append(el("td", verdict, verdict === "pass" ? "pass" : verdict === "fail" ? "fail" : "notrun"));
+    tr.append(el("td", row.detail || row.expected || ""));
+    return tr;
+  }));
+}
+const fromScenario = (r) => ({
+  condition: r.input_kind, event: r.test_id, detected: r.passed, latency_seconds: r.latency_ms / 1000, false_alarms: null,
+  verdict: r.status === "not_run" ? "NOT RUN" : r.status === "passed" ? "pass" : "fail", detail: r.actual_behavior,
+});
+const fromCondition = (r) => ({
+  condition: "captured frames", event: r.name, detected: null, latency_seconds: null, false_alarms: null,
+  verdict: r.as_captured.verdict === "fails" ? "fail" : "pass", detail: `as captured: ${r.as_captured.verdict}` + (r.with_fix ? `; with fix: ${r.with_fix.verdict}` : ""),
+});
+function picks(box, values, checked) {
+  $(box).replaceChildren(...values.map((v) => { const label = el("label"); const box_ = el("input"); box_.type = "checkbox"; box_.value = v; box_.checked = checked(v); label.append(box_, " " + v.replace(/_/g, " ")); return label; }));
+}
+const picked = (box) => [...$(box).querySelectorAll("input:checked")].map((i) => i.value);
+$("runScripted").onclick = async () => {
+  $("testStatus").textContent = "Running the scripted suite…";
+  const reply = await post("/api/scenarios/scripted", { conditions: picked("condPick"), events: picked("eventPick") });
+  $("testStatus").textContent = reply.ok ? "" : reply.error;
+};
+$("capOpen").onclick = () => post("/api/conditions/capture", { eyes_closed: false, seconds: 4 });
+$("capClosed").onclick = () => post("/api/conditions/capture", { eyes_closed: true, seconds: 4 });
+$("capClear").onclick = () => post("/api/conditions/clear").then(() => { $("capCount").textContent = "0 frames"; });
+$("runConditions").onclick = () => post("/api/conditions/run").then((r) => { if (!r.ok) $("testStatus").textContent = r.error; });
+$("runVision").onclick = () => post("/api/scenarios/vision").then((r) => { if (!r.ok) $("testStatus").textContent = r.error; });
+$("runAudio").onclick = () => post("/api/scenarios/audio");
+
+// ---- Train ---------------------------------------------------------------------------------------------
+let curves = {};
+function renderValidation(rows) {
+  $("validation").replaceChildren(...rows.map((r) => {
+    const tr = el("tr");
+    [r.model, fmt(r.auc, 3), fmt(r.auc_eyes_masked, 3), fmt(r.balanced_accuracy, 3), fmt(r.balanced_accuracy_eyes_masked, 3), fmt(r.false_alerts_per_hour)].forEach((v) => tr.append(el("td", String(v))));
+    return tr;
+  }));
+}
+function renderEpochs() {
+  const svg = $("epochs");
+  const colours = ["#2f6fd6", "#d9822b", "#2e9b5f", "#7a5ccc"];
+  const parts = Object.entries(curves).map(([name, points], index) => {
+    const path = points.map((p, i) => `${i ? "L" : "M"}${20 + (p.epoch - 1) * 18},${150 - Math.max(0, (p.held_auc - 0.4) / 0.6) * 140}`).join(" ");
+    return `<path d="${path}" fill="none" stroke="${colours[index % 4]}" stroke-width="2"/><text x="300" y="${16 + index * 14}" fill="${colours[index % 4]}" font-size="11">${name.replace(/[<>&]/g, "")}</text>`;
+  });
+  svg.innerHTML = `<line x1="20" y1="150" x2="390" y2="150" stroke="#e3e6eb"/>` + parts.join("");
+}
+$("trainStart").onclick = () => post("/api/train/start", { environment: $("env").value, track: $("track").value }).then((r) => { if (!r.ok) $("trainStatus").textContent = r.error; });
+
+// ---- events --------------------------------------------------------------------------------------------
+const handlers = {
+  hello(m) { if (m.model) handlers.model(m.model); $("driving").checked = m.driving; renderContacts(m.contacts || []); if (m.signal) renderSignal(m.signal); if (m.microphone) renderMic(m.microphone); if (m.captured) $("capCount").textContent = `${m.captured.open} open, ${m.captured.closed} closed`; },
+  model(m) { $("modelTag").textContent = m.sha ? `Model ${m.sha} · ${m.kind} · ${m.track} · threshold ${fmt(m.threshold)}` : "No model loaded"; },
+  live_status(m) { $("liveStatus").textContent = m.state + (m.message ? `: ${m.message}` : ""); },
+  frame(m) { $("framenote").textContent = `${m.phase}${m.phase === "calibrating" ? ` (${fmt(m.calibration_left, 0)} s left)` : ""} · t ${fmt(m.t, 1)} s · ${m.driving ? "driving" : "parked"} · ${fmt(m.processing_fps_hz, 1)} fps`; },
+  risk_signal(m) { delete m.type; renderSignal(m); },
+  escalation(m) { logLine("escLog", `t ${fmt(m.t, 1)} · episode ${m.episode} · ${m.kind.replace("_", " ")} · tier ${m.tier}: ${m.reason}`); },
+  alert(m) { logLine("escLog", `t ${fmt(m.t, 1)} · alert ${m.kind}`); },
+  capture_done(m) { $("capCount").textContent = `${m.open} open, ${m.closed} closed`; },
+  conditions_status(m) { $("testStatus").textContent = m.state === "running" ? `Running ${m.now || ""}` : (m.message || ""); },
+  conditions(m) { results = m.results.map(fromCondition); renderResults(); $("testStatus").textContent = ""; },
+  scenario_results(m) { results = m.kind === "scripted" ? m.results : m.results.map(fromScenario); renderResults(); },
+  train_plan(m) { curves = {}; renderEpochs(); $("log").textContent = ""; $("stages").replaceChildren(...m.stages.map((s) => { const c = el("span", s, "chip"); c.id = "st-" + s; return c; })); $("trainStatus").textContent = `${m.environment} · ${m.track}`; },
+  stage(m) {
+    const chip = $("st-" + m.stage); if (chip) chip.className = "chip " + m.state;
+    const summary = m.summary || {};
+    if (summary.validation && summary.validation.length) renderValidation(summary.validation);
+    if (summary.auc_eyes_masked !== undefined) $("masked").textContent = `Winner: AUC ${fmt(summary.auc, 3)} with full features, ${fmt(summary.auc_eyes_masked, 3)} with every eye input masked (balanced accuracy ${fmt(summary.balanced_accuracy_eyes_masked, 3)}).`;
+  },
+  epoch(m) { (curves[m.model] = curves[m.model] || []).push(m); renderEpochs(); },
+  epoch_note(m) { $("testNote").textContent = m.message; },
+  test_views(m) { $("testNote").textContent = `${m.people} locked test people at threshold ${fmt(m.threshold)}. ${m.note}`; },
+  train_done(m) { $("trainStatus").textContent = m.ok ? `Done in ${fmt(m.seconds, 0)} s${m.passed === null || m.passed === undefined ? "" : m.passed ? " · staging passed" : " · staging failed"}` : m.error; },
+  log(m) { logLine("log", `${m.level} ${m.logger}: ${m.message}`); },
+};
+
+function refreshState() { fetch("/api/state").then((r) => r.json()).then(handlers.hello); }
+fetch("/api/scenarios").then((r) => r.json()).then((m) => {
+  picks("condPick", m.conditions, (v) => v === "clean" || v === "sunglasses");
+  picks("eventPick", m.events, () => true);
+  results = (m.results || []).map((r) => (r.verdict ? r : fromScenario(r))); renderResults();
+});
+const events = new EventSource("/events");
+events.onmessage = (e) => { const m = JSON.parse(e.data); (handlers[m.type] || (() => {}))(m); };
+refreshState();
+</script>
+</body>
+</html>

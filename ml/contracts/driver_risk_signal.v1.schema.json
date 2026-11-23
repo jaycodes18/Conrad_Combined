@@ -1,0 +1,918 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driven.local/contracts/driver_risk_signal.v1.schema.json",
+  "title": "DriverRiskSignal v1",
+  "description": "One assessment from the Driven ML side, emitted per camera frame. Observable driving-risk indicators only: no pixels, landmarks, audio, transcripts or GPS coordinates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "driver_ref",
+    "t_seconds",
+    "emitted_at",
+    "condition",
+    "level",
+    "score",
+    "confidence",
+    "indicators",
+    "coverage",
+    "monitoring_degraded",
+    "escalation",
+    "model",
+    "app_alert",
+    "disclaimer"
+  ],
+  "$defs": {
+    "unit": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": "driver_risk_signal.v1"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "driver_ref": {
+      "type": "string",
+      "description": "Pseudonymous driver id, never a name or an email.",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "t_seconds": {
+      "type": "number",
+      "description": "Session time in seconds."
+    },
+    "emitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "condition": {
+      "enum": [
+        "none",
+        "distracted",
+        "drowsy",
+        "possible_impairment",
+        "possible_unresponsiveness"
+      ]
+    },
+    "level": {
+      "enum": [
+        "none",
+        "low",
+        "elevated",
+        "high"
+      ]
+    },
+    "score": {
+      "$ref": "#/$defs/unit"
+    },
+    "confidence": {
+      "$ref": "#/$defs/unit"
+    },
+    "indicators": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eyes",
+        "ocular",
+        "head",
+        "breathing",
+        "responsiveness",
+        "sensor_quality"
+      ],
+      "properties": {
+        "eyes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available",
+            "state",
+            "value",
+            "severity",
+            "confidence",
+            "evidence",
+            "unavailable_reason"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "open",
+                "blinking",
+                "closure_warning",
+                "closure_critical",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "severity": {
+              "$ref": "#/$defs/unit"
+            },
+            "confidence": {
+              "$ref": "#/$defs/unit"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "unavailable_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "severity": {
+                    "const": 0
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "unavailable_reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unavailable_reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "ocular": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available",
+            "state",
+            "value",
+            "severity",
+            "confidence",
+            "evidence",
+            "unavailable_reason"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "steady",
+                "scanning",
+                "erratic_5s",
+                "erratic_10s",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "severity": {
+              "$ref": "#/$defs/unit"
+            },
+            "confidence": {
+              "$ref": "#/$defs/unit"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "unavailable_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "severity": {
+                    "const": 0
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "unavailable_reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unavailable_reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "head": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available",
+            "state",
+            "value",
+            "severity",
+            "confidence",
+            "evidence",
+            "unavailable_reason"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "stable",
+                "nodding",
+                "head_drop",
+                "slumped",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "severity": {
+              "$ref": "#/$defs/unit"
+            },
+            "confidence": {
+              "$ref": "#/$defs/unit"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "unavailable_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "severity": {
+                    "const": 0
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "unavailable_reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unavailable_reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "breathing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available",
+            "state",
+            "value",
+            "severity",
+            "confidence",
+            "evidence",
+            "unavailable_reason"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "regular",
+                "irregular",
+                "agonal_pattern_suspected",
+                "not_detected_quiet_cabin",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "severity": {
+              "$ref": "#/$defs/unit"
+            },
+            "confidence": {
+              "$ref": "#/$defs/unit"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "unavailable_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "severity": {
+                    "const": 0
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "unavailable_reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unavailable_reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "responsiveness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available",
+            "state",
+            "value",
+            "severity",
+            "confidence",
+            "evidence",
+            "unavailable_reason"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "idle",
+                "waiting",
+                "responded",
+                "no_response",
+                "unavailable"
+              ]
+            },
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "severity": {
+              "$ref": "#/$defs/unit"
+            },
+            "confidence": {
+              "$ref": "#/$defs/unit"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "unavailable_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "severity": {
+                    "const": 0
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "unavailable_reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unavailable_reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "sensor_quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available",
+            "state",
+            "value",
+            "severity",
+            "confidence",
+            "evidence",
+            "unavailable_reason"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "state": {
+              "enum": [
+                "ok",
+                "degraded",
+                "fault"
+              ]
+            },
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "severity": {
+              "$ref": "#/$defs/unit"
+            },
+            "confidence": {
+              "$ref": "#/$defs/unit"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "unavailable_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": false
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "severity": {
+                    "const": 0
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "unavailable_reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "available": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "unavailable_reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eyes",
+        "ocular",
+        "head",
+        "breathing",
+        "responsiveness"
+      ],
+      "properties": {
+        "eyes": {
+          "enum": [
+            "available",
+            "degraded",
+            "unavailable"
+          ]
+        },
+        "ocular": {
+          "enum": [
+            "available",
+            "degraded",
+            "unavailable"
+          ]
+        },
+        "head": {
+          "enum": [
+            "available",
+            "degraded",
+            "unavailable"
+          ]
+        },
+        "breathing": {
+          "enum": [
+            "available",
+            "degraded",
+            "unavailable"
+          ]
+        },
+        "responsiveness": {
+          "enum": [
+            "available",
+            "degraded",
+            "unavailable"
+          ]
+        }
+      }
+    },
+    "monitoring_degraded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active",
+        "situations"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "situations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "sunglasses_or_eye_occlusion",
+              "clear_glasses_glare",
+              "low_light",
+              "ir_mode",
+              "backlit",
+              "face_out_of_frame",
+              "camera_fault",
+              "mic_fault",
+              "cabin_too_noisy",
+              "image_blur",
+              "fisheye_distortion",
+              "lower_face_occluded"
+            ]
+          }
+        }
+      }
+    },
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier",
+        "in_car_alert",
+        "responsiveness_check",
+        "notify_contacts",
+        "share_location",
+        "voice_call_recommended",
+        "emergency_services",
+        "reason"
+      ],
+      "properties": {
+        "tier": {
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "in_car_alert": {
+          "type": "boolean",
+          "description": "True on the one signal that starts Tier 1: speak the alert."
+        },
+        "responsiveness_check": {
+          "enum": [
+            "idle",
+            "waiting",
+            "responded",
+            "no_response",
+            "unavailable"
+          ]
+        },
+        "notify_contacts": {
+          "type": "boolean",
+          "description": "True on the one signal that starts Tier 2 with a consented contact under the daily cap."
+        },
+        "share_location": {
+          "enum": [
+            "none",
+            "precise"
+          ]
+        },
+        "voice_call_recommended": {
+          "type": "boolean",
+          "description": "True on the one signal that starts Tier 3; only with a contact whose consent covers calls."
+        },
+        "emergency_services": {
+          "const": "never_automated"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "notify_contacts": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "share_location": {
+                "const": "precise"
+              },
+              "tier": {
+                "const": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "voice_call_recommended": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "tier": {
+                "const": 3
+              }
+            }
+          }
+        }
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature_spec_version",
+        "artifact_hash",
+        "track",
+        "experimental"
+      ],
+      "properties": {
+        "feature_spec_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "artifact_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "track": {
+          "enum": [
+            "research",
+            "commercial"
+          ]
+        },
+        "experimental": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "eyes",
+              "ocular",
+              "head",
+              "breathing",
+              "responsiveness",
+              "sensor_quality"
+            ]
+          }
+        }
+      }
+    },
+    "app_alert": {
+      "type": "object",
+      "description": "The app's existing RiskAlert / guardian_test_alerts fields, unchanged: cue, level (1-3, the escalation tier) and evidence_ms.",
+      "additionalProperties": false,
+      "required": [
+        "cue",
+        "level",
+        "evidence_ms"
+      ],
+      "properties": {
+        "cue": {
+          "enum": [
+            "eye-closure",
+            "head-away",
+            null
+          ]
+        },
+        "level": {
+          "enum": [
+            1,
+            2,
+            3,
+            null
+          ]
+        },
+        "evidence_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 600000
+        }
+      }
+    },
+    "disclaimer": {
+      "const": "Driven reports observable driving-risk indicators. It does not measure alcohol or identify any medical condition."
+    }
+  }
+}

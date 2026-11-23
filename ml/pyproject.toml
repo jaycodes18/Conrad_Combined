@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driven-ml"
+version = "0.2.0"
+description = "Driven's drowsiness-model pipeline: discovery, features, training, locked test, staging and promotion."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pyarrow>=14",
+    "scikit-learn>=1.4",
+    "opencv-python-headless>=4.9",
+    "mediapipe>=0.10.14",
+]
+
+[project.optional-dependencies]
+discovery = ["huggingface_hub>=0.23", "kaggle>=1.6"]
+studio-audio = ["sounddevice>=0.4.6"]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11", "pre-commit>=3.7", "pandas-stubs", "nbformat", "nbclient", "ipykernel"]
+
+[project.scripts]
+driven-ml = "driven_ml.cli:main"
+driven-launch-check = "driven_ml.launch:main"
+
+[tool.setuptools.packages.find]
+include = ["driven_ml*"]
+
+[tool.setuptools.package-data]
+"driven_ml.studio" = ["static/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error::FutureWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "PL", "S", "BLE", "C4", "PT"]
+# PLC0415: heavy optional imports (mediapipe, cv2, huggingface_hub, kaggle) live inside functions.
+ignore = ["PLR0913", "PLR2004", "RUF001", "RUF002", "RUF003", "PLC0415"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests run git with fixed arguments to check the repository itself.
+"tests/*" = ["S101", "S311", "S603", "S607"]
+"tools/*" = ["S603", "S607"]
+# The Colab setup cell pip-installs the package with a fixed argument list.
+"notebooks/*" = ["S603"]
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
+ignore_missing_imports = true
+exclude = ["tests/", "tools/"]

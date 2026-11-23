@@ -1,0 +1,119 @@
+{
+  "schema_version": "driver_risk_signal.v1",
+  "session_id": "fixture-possible-impairment",
+  "driver_ref": "drv_fixture01",
+  "t_seconds": 160.7,
+  "emitted_at": "2026-11-23T15:02:40.700Z",
+  "condition": "possible_impairment",
+  "level": "high",
+  "score": 0.85,
+  "confidence": 0.76,
+  "indicators": {
+    "eyes": {
+      "available": true,
+      "state": "open",
+      "value": 0.0,
+      "severity": 0.0804,
+      "confidence": 0.9721,
+      "evidence": [
+        "Eyes at least 80% closed 3% of the last 60 s.",
+        "Last closure lasted 0.20 s."
+      ],
+      "unavailable_reason": null
+    },
+    "ocular": {
+      "available": true,
+      "state": "erratic_10s",
+      "value": 6.8266,
+      "severity": 0.9,
+      "confidence": 1.0,
+      "evidence": [
+        "Eye movement has been unusually scattered for 10 s (instability 6.8)."
+      ],
+      "unavailable_reason": null
+    },
+    "head": {
+      "available": true,
+      "state": "nodding",
+      "value": 5.0,
+      "severity": 0.5,
+      "confidence": 0.9,
+      "evidence": [
+        "5 head nods in the last minute."
+      ],
+      "unavailable_reason": null
+    },
+    "breathing": {
+      "available": false,
+      "state": "unavailable",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.0,
+      "evidence": [
+        "The microphone is off until a written legal review allows it."
+      ],
+      "unavailable_reason": "mic_blocked_by_policy"
+    },
+    "responsiveness": {
+      "available": true,
+      "state": "responded",
+      "value": 0.1,
+      "severity": 0.0,
+      "confidence": 0.8,
+      "evidence": [
+        "The driver responded 0.1 s after the alert."
+      ],
+      "unavailable_reason": null
+    },
+    "sensor_quality": {
+      "available": true,
+      "state": "ok",
+      "value": 0.8,
+      "severity": 0.0,
+      "confidence": 1.0,
+      "evidence": [
+        "The microphone is off by policy."
+      ],
+      "unavailable_reason": null
+    }
+  },
+  "coverage": {
+    "eyes": "available",
+    "ocular": "available",
+    "head": "available",
+    "breathing": "unavailable",
+    "responsiveness": "available"
+  },
+  "monitoring_degraded": {
+    "active": false,
+    "situations": []
+  },
+  "escalation": {
+    "tier": 2,
+    "in_car_alert": false,
+    "responsiveness_check": "responded",
+    "notify_contacts": true,
+    "share_location": "precise",
+    "voice_call_recommended": false,
+    "emergency_services": "never_automated",
+    "reason": "Possible impairment reached high. Contacts would be texted with the phone's precise location."
+  },
+  "model": {
+    "feature_spec_version": 4,
+    "artifact_hash": null,
+    "track": "research",
+    "experimental": [
+      "eyes",
+      "ocular",
+      "head",
+      "breathing",
+      "responsiveness"
+    ]
+  },
+  "app_alert": {
+    "cue": "head-away",
+    "level": 2,
+    "evidence_ms": 0
+  },
+  "disclaimer": "Driven reports observable driving-risk indicators. It does not measure alcohol or identify any medical condition."
+}

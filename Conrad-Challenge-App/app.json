@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Conrad Driver Monitor",
+    "slug": "conrad-driver-monitor",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.saharshambati.conraddrivermonitor",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.saharshambati.conraddrivermonitor",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "Allow the front camera to check for sustained eye closure and head turns during a monitoring session.", "microphonePermission": false, "recordAudioAndroid": false }],
+      ["expo-location", { "locationWhenInUsePermission": "Use your location to center the parked map, estimate speed, or attach a location to a chosen guardian test alert." }],
+      ["expo-audio", { "microphonePermission": false, "recordAudioAndroid": false, "enableBackgroundPlayback": false, "enableBackgroundRecording": false }],
+      "expo-secure-store"
+    ]
+  }
+}

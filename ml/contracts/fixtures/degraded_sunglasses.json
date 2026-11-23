@@ -1,0 +1,121 @@
+{
+  "schema_version": "driver_risk_signal.v1",
+  "session_id": "fixture-degraded-sunglasses",
+  "driver_ref": "drv_fixture01",
+  "t_seconds": 150.0,
+  "emitted_at": "2026-11-23T15:02:30.000Z",
+  "condition": "none",
+  "level": "none",
+  "score": 0.0,
+  "confidence": 0.24,
+  "indicators": {
+    "eyes": {
+      "available": false,
+      "state": "unavailable",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.0,
+      "evidence": [
+        "The eyes are not visible (sunglasses, glare or a hand), so closure is not measured."
+      ],
+      "unavailable_reason": "eyes_not_visible"
+    },
+    "ocular": {
+      "available": false,
+      "state": "unavailable",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.0,
+      "evidence": [
+        "Eye movement is not measured while the eyes cannot be seen."
+      ],
+      "unavailable_reason": "eyes_not_visible"
+    },
+    "head": {
+      "available": true,
+      "state": "stable",
+      "value": 0.0,
+      "severity": 0.0,
+      "confidence": 0.9,
+      "evidence": [
+        "Head position is steady."
+      ],
+      "unavailable_reason": null
+    },
+    "breathing": {
+      "available": false,
+      "state": "unavailable",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.0,
+      "evidence": [
+        "The microphone is off until a written legal review allows it."
+      ],
+      "unavailable_reason": "mic_blocked_by_policy"
+    },
+    "responsiveness": {
+      "available": true,
+      "state": "idle",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.8,
+      "evidence": [
+        "No response check is running."
+      ],
+      "unavailable_reason": null
+    },
+    "sensor_quality": {
+      "available": true,
+      "state": "degraded",
+      "value": 0.3,
+      "severity": 0.0,
+      "confidence": 1.0,
+      "evidence": [
+        "The eyes are covered (sunglasses or a hand); head monitoring continues.",
+        "The microphone is off by policy."
+      ],
+      "unavailable_reason": null
+    }
+  },
+  "coverage": {
+    "eyes": "unavailable",
+    "ocular": "unavailable",
+    "head": "available",
+    "breathing": "unavailable",
+    "responsiveness": "degraded"
+  },
+  "monitoring_degraded": {
+    "active": true,
+    "situations": [
+      "sunglasses_or_eye_occlusion"
+    ]
+  },
+  "escalation": {
+    "tier": 0,
+    "in_car_alert": false,
+    "responsiveness_check": "idle",
+    "notify_contacts": false,
+    "share_location": "none",
+    "voice_call_recommended": false,
+    "emergency_services": "never_automated",
+    "reason": "No active episode."
+  },
+  "model": {
+    "feature_spec_version": 4,
+    "artifact_hash": null,
+    "track": "research",
+    "experimental": [
+      "eyes",
+      "ocular",
+      "head",
+      "breathing",
+      "responsiveness"
+    ]
+  },
+  "app_alert": {
+    "cue": null,
+    "level": null,
+    "evidence_ms": null
+  },
+  "disclaimer": "Driven reports observable driving-risk indicators. It does not measure alcohol or identify any medical condition."
+}

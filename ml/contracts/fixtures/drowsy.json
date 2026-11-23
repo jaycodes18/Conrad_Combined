@@ -1,0 +1,119 @@
+{
+  "schema_version": "driver_risk_signal.v1",
+  "session_id": "fixture-drowsy",
+  "driver_ref": "drv_fixture01",
+  "t_seconds": 151.9,
+  "emitted_at": "2026-11-23T15:02:31.900Z",
+  "condition": "drowsy",
+  "level": "elevated",
+  "score": 0.55,
+  "confidence": 0.7999,
+  "indicators": {
+    "eyes": {
+      "available": true,
+      "state": "closure_warning",
+      "value": 2.0,
+      "severity": 0.4,
+      "confidence": 0.9998,
+      "evidence": [
+        "Eyes closed for 2.0 s.",
+        "Eyes at least 80% closed 10% of the last 60 s."
+      ],
+      "unavailable_reason": null
+    },
+    "ocular": {
+      "available": true,
+      "state": "steady",
+      "value": 0.5401,
+      "severity": 0.0,
+      "confidence": 1.0,
+      "evidence": [
+        "Eye movement is within this driver's calibrated range."
+      ],
+      "unavailable_reason": null
+    },
+    "head": {
+      "available": true,
+      "state": "stable",
+      "value": 0.0,
+      "severity": 0.0,
+      "confidence": 0.9,
+      "evidence": [
+        "Head position is steady."
+      ],
+      "unavailable_reason": null
+    },
+    "breathing": {
+      "available": false,
+      "state": "unavailable",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.0,
+      "evidence": [
+        "The microphone is off until a written legal review allows it."
+      ],
+      "unavailable_reason": "mic_blocked_by_policy"
+    },
+    "responsiveness": {
+      "available": true,
+      "state": "idle",
+      "value": null,
+      "severity": 0.0,
+      "confidence": 0.8,
+      "evidence": [
+        "No response check is running."
+      ],
+      "unavailable_reason": null
+    },
+    "sensor_quality": {
+      "available": true,
+      "state": "ok",
+      "value": 0.8,
+      "severity": 0.0,
+      "confidence": 1.0,
+      "evidence": [
+        "The microphone is off by policy."
+      ],
+      "unavailable_reason": null
+    }
+  },
+  "coverage": {
+    "eyes": "available",
+    "ocular": "available",
+    "head": "available",
+    "breathing": "unavailable",
+    "responsiveness": "available"
+  },
+  "monitoring_degraded": {
+    "active": false,
+    "situations": []
+  },
+  "escalation": {
+    "tier": 1,
+    "in_car_alert": true,
+    "responsiveness_check": "waiting",
+    "notify_contacts": false,
+    "share_location": "none",
+    "voice_call_recommended": false,
+    "emergency_services": "never_automated",
+    "reason": "In-car alert: drowsy (elevated)."
+  },
+  "model": {
+    "feature_spec_version": 4,
+    "artifact_hash": null,
+    "track": "research",
+    "experimental": [
+      "eyes",
+      "ocular",
+      "head",
+      "breathing",
+      "responsiveness"
+    ]
+  },
+  "app_alert": {
+    "cue": "eye-closure",
+    "level": 1,
+    "evidence_ms": 2000
+  },
+  "disclaimer": "Driven reports observable driving-risk indicators. It does not measure alcohol or identify any medical condition."
+}

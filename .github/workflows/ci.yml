@@ -1,0 +1,44 @@
+# Lint, types, tests, the dev pipeline run and both notebooks, on every pull request and every push to main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: ml/pyproject.toml
+
+      - name: Install
+        run: make setup
+
+      - name: No data in git
+        run: python ml/tools/check_no_data.py --tracked
+
+      - name: make check
+        run: make check
+
+      - name: make notebooks
+        run: make notebooks

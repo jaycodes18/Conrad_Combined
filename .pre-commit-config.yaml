@@ -1,0 +1,27 @@
+# Runs on every commit. The hooks use the tools installed by `make setup`, so they match `make check`.
+# pytest is left to CI: it is too slow for every commit.
+repos:
+  - repo: local
+    hooks:
+      - id: no-data
+        name: no data, recordings or files over 5 MB
+        entry: python ml/tools/check_no_data.py
+        language: system
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check --force-exclude
+        language: system
+        types_or: [python, jupyter]
+        files: ^ml/
+      - id: ruff-format
+        name: ruff format --check
+        entry: ruff format --check --force-exclude
+        language: system
+        types_or: [python, jupyter]
+        files: ^ml/
+      - id: mypy
+        name: mypy driven_ml
+        entry: bash -c 'cd ml && mypy driven_ml'
+        language: system
+        pass_filenames: false
+        files: ^ml/
