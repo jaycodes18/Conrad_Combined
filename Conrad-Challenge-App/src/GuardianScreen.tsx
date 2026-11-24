@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert, AppState, Text, View } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { guardianGateway } from './guardian';
 import type { GuardianLink, GuardianTestAlert } from './guardian';
-import { cueLabel } from './risk';
-import { Action, Body, Card, Field, Heading, Label } from './ui';
+import type { Role } from './trips';
+import { Action, Body, Card, colors, Field, Label, Pill, ScreenTitle, SectionHeader, styles } from './ui';
 
 export function useGuardian() {
   const [session, setSession] = useState<Session | null>(null);
@@ -69,27 +69,13 @@ export function useGuardian() {
   return { session, links, inbox, error, refresh, linkLabel };
 }
 
-export function GuardianScreen({ guardian }: { guardian: ReturnType<typeof useGuardian> }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [target, setTarget] = useState('');
+export type GuardianState = ReturnType<typeof useGuardian>;
+
+function useTask() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const { session, links, inbox, error, refresh, linkLabel } = guardian;
-
-  if (!guardianGateway) {
-    return <>
-      <Heading>Guardian</Heading>
-      <Card>
-        <Label>Local mode</Label>
-        <Body>Pairing and the guardian test inbox are available when the app is connected to a Supabase test project. Test escalations appear in local trip history in the meantime.</Body>
-      </Card>
-    </>;
-  }
-  const api = guardianGateway;
-
-  async function perform(task: () => Promise<string>) {
+  const perform = useCallback(async (task: () => Promise<string>) => {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
@@ -102,107 +88,163 @@ export function GuardianScreen({ guardian }: { guardian: ReturnType<typeof useGu
       lock.current = false;
       setBusy(false);
     }
+  }, []);
+  return { message, busy, perform };
+}
+
+const COPY: Record<Role, { title: string; subtitle: string; signIn: string }> = {
+  driver: {
+    title: 'Family',
+    subtitle: 'Invite a parent or guardian. They see alerts only after they accept, and only what you allow.',
+    signIn: 'Sign in so a parent can receive your alerts on their own phone.',
+  },
+  guardian: {
+    title: 'Family',
+    subtitle: 'Accept your teen’s invitation to receive their alerts on this phone.',
+    signIn: 'Sign in with the email your teen invited.',
+  },
+};
+
+function SignIn({ role }: { role: Role }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { message, busy, perform } = useTask();
+  const api = guardianGateway;
+  if (!api) return null;
+  const valid = email.includes('@') && password.length >= 8;
+  return <Card>
+    <Label>Account</Label>
+    <Body>{COPY[role].signIn}</Body>
+    <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" />
+    <Field label="Password (8+ characters)" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" />
+    <Action title="Sign in" disabled={busy || !valid} onPress={() => void perform(async () => {
+      await api.signIn(email, password);
+      setPassword('');
+      return 'Signed in.';
+    })} />
+    <Action title="Create account" secondary disabled={busy || !valid} onPress={() => void perform(async () => {
+      const { needsEmailVerification } = await api.signUp(email, password);
+      setPassword('');
+      return needsEmailVerification ? 'Check your email for a confirmation link, then sign in here.' : 'Account created.';
+    })} />
+    {message ? <Body small>{message}</Body> : null}
+  </Card>;
+}
+
+function LinkCard({ link, guardian, role, busy, perform }: {
+  link: GuardianLink; guardian: GuardianState; role: Role; busy: boolean;
+  perform: (task: () => Promise<string>) => Promise<void>;
+}) {
+  const api = guardianGateway;
+  if (!api) return null;
+  const pending = link.status === 'pending';
+  const own = link.driverId === guardian.session?.user.id;
+  const who = link.otherEmail || 'Link ' + link.id.slice(0, 8).toUpperCase();
+  return <Card flat>
+    <View style={styles.row}>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }} numberOfLines={1}>{who}</Text>
+        <Body small>{own ? 'Your guardian' : 'Your driver'} · since {new Date(link.acceptedAt ?? link.createdAt).toLocaleDateString()}</Body>
+      </View>
+      <Pill label={pending ? 'Pending' : 'Connected'} tone={pending ? 'watch' : 'safe'} />
+    </View>
+    {!pending && <Pill label={link.locationSharing ? 'Location shared on alerts' : 'Location not shared'}
+      tone={link.locationSharing ? 'brand' : 'off'} />}
+    {pending && !own && <>
+      <Body small>Confirm code {link.id.slice(0, 8).toUpperCase()} with your teen before accepting.</Body>
+      <Action title="Accept invitation" disabled={busy} onPress={() => void perform(async () => {
+        await api.acceptInvite(link.id);
+        await guardian.refresh();
+        return 'Invitation accepted. Alerts will appear on Home.';
+      })} />
+    </>}
+    {pending && own && <Body small>Waiting for the guardian to accept code {link.id.slice(0, 8).toUpperCase()}.</Body>}
+    {own && !pending && role === 'driver' && <Action compact secondary
+      title={link.locationSharing ? 'Stop sharing location on alerts' : 'Allow location on alerts'}
+      disabled={busy} onPress={() => void perform(async () => {
+        await api.setLocationSharing(link.id, !link.locationSharing);
+        await guardian.refresh();
+        return 'Location preference updated.';
+      })} />}
+    {!pending && <Pill label={link.videoSharing ? 'Camera shared on drives' : 'Camera not shared'}
+      tone={link.videoSharing ? 'critical' : 'off'} />}
+    {own && !pending && role === 'driver' && <Action compact secondary
+      title={link.videoSharing ? 'Stop camera sharing' : 'Allow camera on shared drives'}
+      disabled={busy} onPress={() => void perform(async () => {
+        await api.setVideoSharing(link.id, !link.videoSharing);
+        await guardian.refresh();
+        return link.videoSharing ? 'Camera sharing turned off.' : 'Camera sharing allowed. You still turn the camera on for each drive.';
+      })} />}
+    <Action compact tone="ghost" title={pending ? 'Remove invitation' : 'Disconnect'} disabled={busy} onPress={() =>
+      Alert.alert(pending ? 'Remove invitation?' : 'Disconnect?', 'This ends access to alerts shared through this link.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => void perform(async () => {
+          await api.revokeLink(link.id);
+          await guardian.refresh();
+          return 'Connection removed.';
+        }) },
+      ])
+    } />
+  </Card>;
+}
+
+export function FamilyScreen({ guardian, role }: { guardian: GuardianState; role: Role }) {
+  const [target, setTarget] = useState('');
+  const { message, busy, perform } = useTask();
+  const { session, links, error, refresh } = guardian;
+  const api = guardianGateway;
+
+  if (!api) {
+    return <>
+      <ScreenTitle eyebrow="Connections" title={COPY[role].title} subtitle={COPY[role].subtitle} />
+      <Card tone="watch">
+        <Label>Local mode</Label>
+        <Body>Pairing needs the Supabase test project in .env.local. Until then, alerts stay in this phone&apos;s history{role === 'guardian' ? ' and Home shows a labeled sample' : ''}.</Body>
+      </Card>
+    </>;
   }
+  const gateway = api;
 
   if (!session) {
-    const valid = email.includes('@') && password.length >= 8;
     return <>
-      <Heading>Guardian access</Heading>
-      <Body>Sign in on each phone with separate accounts to test an alert between a driver and guardian.</Body>
-      <Card>
-        <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" />
-        <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" />
-        <Action title="Sign in" disabled={busy || !valid} onPress={() => void perform(async () => {
-          await api.signIn(email, password);
-          setPassword('');
-          return 'Signed in.';
-        })} />
-        <Action title="Create test account" secondary disabled={busy || !valid} onPress={() => void perform(async () => {
-          const { needsEmailVerification } = await api.signUp(email, password);
-          setPassword('');
-          return needsEmailVerification ? 'Check your email for a confirmation link, then return here to sign in.' : 'Test account created.';
-        })} />
-        <Body>Use a password with at least eight characters.</Body>
-      </Card>
-      {message ? <Body>{message}</Body> : null}
+      <ScreenTitle eyebrow="Connections" title={COPY[role].title} subtitle={COPY[role].subtitle} />
+      <SignIn role={role} />
     </>;
   }
 
+  const active = links.filter((link) => link.status !== 'revoked');
+  const mine = active.filter((link) => role === 'driver' ? link.driverId === session.user.id : link.driverId !== session.user.id);
   return <>
-    <Heading>Guardian access</Heading>
-    <Body>Signed in as {session.user.email ?? 'test account'}. Paired guardians can see test alerts after accepting an invitation.</Body>
-    <Card>
-      <Label>Invite a consenting guardian</Label>
-      <Field label="Guardian account email" value={target} onChangeText={setTarget} autoCapitalize="none" keyboardType="email-address" />
-      <Action title="Create invitation" disabled={busy || !target.includes('@')} onPress={() => void perform(async () => {
-        const id = await api.inviteGuardian(target);
+    <ScreenTitle eyebrow="Connections" title={COPY[role].title} subtitle={COPY[role].subtitle} />
+    {role === 'driver' && <Card>
+      <Label>Invite a parent or guardian</Label>
+      <Field label="Their account email" value={target} onChangeText={setTarget} autoCapitalize="none" keyboardType="email-address" />
+      <Action title="Send invitation" disabled={busy || !target.includes('@')} onPress={() => void perform(async () => {
+        const id = await gateway.inviteGuardian(target);
         setTarget('');
         await refresh();
-        return 'Ask the guardian to sign in and look for invitation ' + id.slice(0, 8).toUpperCase() + '.';
+        return 'Invitation sent. Share code ' + id.slice(0, 8).toUpperCase() + ' with them in person.';
       })} />
-    </Card>
-    <Card>
-      <Label>Connections</Label>
-      <Action title="Refresh links and inbox" secondary disabled={busy} onPress={() => void refresh()} />
-      {!links.some((link) => link.status !== 'revoked') && <Body>No invitations or active links.</Body>}
-      {links.filter((link) => link.status !== 'revoked').map((link) => {
-        const driver = link.driverId === session.user.id;
-        const pending = link.status === 'pending';
-        return <Card key={link.id}>
-          <Label>{linkLabel(link)}</Label>
-          <Body>{pending ? 'Awaiting guardian acceptance' : 'Accepted'} · {new Date(link.createdAt).toLocaleDateString()}</Body>
-          {pending && !driver && <>
-            <Body>Confirm invitation {link.id.slice(0, 8).toUpperCase()} with the driver before accepting.</Body>
-            <Action title="Accept this invitation" disabled={busy} onPress={() => void perform(async () => {
-              await api.acceptInvite(link.id);
-              await refresh();
-              return 'Guardian invitation accepted.';
-            })} />
-          </>}
-          {driver && !pending && <Action title={link.locationSharing ? 'Disable location for this link' : 'Allow opt-in location for this link'}
-            secondary disabled={busy} onPress={() => void perform(async () => {
-              await api.setLocationSharing(link.id, !link.locationSharing);
-              await refresh();
-              return 'Location preference updated.';
-            })} />}
-          <Action title={pending ? 'Remove invitation' : 'Revoke link'} secondary disabled={busy} onPress={() =>
-            Alert.alert(pending ? 'Remove invitation?' : 'Revoke this link?', 'This ends access to alerts shared through this link.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Remove', style: 'destructive', onPress: () => void perform(async () => {
-                await api.revokeLink(link.id);
-                await refresh();
-                return 'Connection removed.';
-              }) },
-            ])
-          } />
-        </Card>;
-      })}
-    </Card>
-    <Card>
-      <Label>Guardian test inbox</Label>
-      <Body>Open this screen on the guardian phone during the drill. Test alerts update while the app is open.</Body>
-      {!inbox.length && <Body>No guardian test alerts received.</Body>}
-      {inbox.map((entry) => <Card key={entry.id}>
-        <Label>TEST · {cueLabel[entry.cue]}</Label>
-        <Body>{new Date(entry.createdAt).toLocaleString()} · {(entry.evidenceMs / 1000).toFixed(1)} s of evidence</Body>
-        {entry.locationLat !== null && entry.locationLng !== null &&
-          <Body>Shared location {entry.locationLat.toFixed(4)}, {entry.locationLng.toFixed(4)}</Body>}
-      </Card>)}
-    </Card>
+    </Card>}
+    <SectionHeader title={role === 'driver' ? 'Your guardians' : 'Your drivers'}
+      action={<Action compact tone="ghost" title="Refresh" disabled={busy} onPress={() => void refresh()} />} />
+    {!mine.length && <Card flat><Body>{role === 'driver' ? 'No guardians yet.' : 'No invitations yet. Ask your teen to invite this email.'}</Body></Card>}
+    {mine.map((link) => <LinkCard key={link.id} link={link} guardian={guardian} role={role} busy={busy} perform={perform} />)}
     {error ? <Body urgent>{error}</Body> : null}
-    {message ? <Body>{message}</Body> : null}
-    <Card>
-      <Label>Account</Label>
-      <Action title="Sign out" secondary disabled={busy} onPress={() => void perform(async () => {
-        await api.signOut();
+    {message ? <Body small>{message}</Body> : null}
+    <SectionHeader title="Account" />
+    <Card flat>
+      <Body small>Signed in as {session.user.email ?? 'test account'}</Body>
+      <Action compact secondary title="Sign out" disabled={busy} onPress={() => void perform(async () => {
+        await gateway.signOut();
         return 'Signed out.';
       })} />
-      <Action title="Delete test account" secondary disabled={busy} onPress={() =>
-        Alert.alert('Delete this test account?', 'This removes your account, links, and associated guardian test alerts.', [
+      <Action compact tone="danger" title="Delete account" disabled={busy} onPress={() =>
+        Alert.alert('Delete this account?', 'This removes your account, links, and associated alerts.', [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Delete account', style: 'destructive', onPress: () => void perform(async () => {
-            await api.deleteAccount();
-            return 'Test account deleted.';
+            await gateway.deleteAccount();
+            return 'Account deleted.';
           }) },
         ])
       } />

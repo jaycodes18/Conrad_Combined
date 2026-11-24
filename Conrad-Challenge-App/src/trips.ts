@@ -4,13 +4,15 @@ export type SessionSource = { mode: 'camera'; scenario?: never } |
   { mode: 'drill' | 'ml-replay'; scenario: Cue };
 
 export type Contact = { name: string; phone: string };
+export type Role = 'driver' | 'guardian';
 export type Preferences = {
+  role: Role | null;
   driver: string;
   contact: Contact | null;
   gps: boolean;
   voice: boolean;
 };
-export const defaultPreferences: Preferences = { driver: '', contact: null, gps: false, voice: true };
+export const defaultPreferences: Preferences = { role: null, driver: '', contact: null, gps: false, voice: true };
 
 export type Delivery = {
   state: 'pending' | 'delivered' | 'failed' | 'unknown' | 'local';

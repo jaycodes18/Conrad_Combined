@@ -1,7 +1,9 @@
 import { CameraView, type CameraCapturedPicture } from 'expo-camera';
 import { File } from 'expo-file-system';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import WebView, { type WebViewMessageEvent, type WebViewProps } from 'react-native-webview';
 import { readLocalAsset } from './localAsset';
 import { MAX_OBSERVATION_GAP_MS } from './risk';
@@ -13,6 +15,12 @@ export type CameraMonitorProps = {
   onObservation: (observation: Observation) => void;
   onTrackingDelay: (slowFrameMs?: number) => void;
   onFault: (message: string) => void;
+  /** Receives each captured JPEG (base64) for the opt-in family camera, before the temporary file is removed. */
+  onFrame?: (jpgBase64: string) => void;
+  /** Preview frame size and shape; the default is a 3:4 portrait frame. */
+  style?: StyleProp<ViewStyle>;
+  /** Overlay drawn above the camera preview, for the session HUD. */
+  children?: ReactNode;
 };
 
 const MODEL = require('../assets/face-landmarker.task');
@@ -27,7 +35,7 @@ const STARTUP_WATCHDOG_MS = 45_000;
 type MonitorWebViewProps = WebViewProps & { ref?: React.Ref<WebView> };
 const NativeWebView = WebView as unknown as React.ComponentType<MonitorWebViewProps>;
 
-export function CameraMonitor({ onObservation, onTrackingDelay, onFault }: CameraMonitorProps) {
+export function CameraMonitor({ onObservation, onTrackingDelay, onFault, onFrame, style, children }: CameraMonitorProps) {
   const camera = useRef<CameraView>(null);
   const webview = useRef<WebView>(null);
   const cameraReady = useRef(false);
@@ -48,6 +56,8 @@ export function CameraMonitor({ onObservation, onTrackingDelay, onFault }: Camer
   onObservationRef.current = onObservation;
   onFaultRef.current = onFault;
   onTrackingDelayRef.current = onTrackingDelay;
+  const onFrameRef = useRef(onFrame);
+  onFrameRef.current = onFrame;
 
   const fail = useCallback((message: string) => {
     if (disposed.current || faulted.current) return;
@@ -135,6 +145,7 @@ export function CameraMonitor({ onObservation, onTrackingDelay, onFault }: Camer
           if (disposed.current || !running.current) break;
           pendingFrameAt.current = captureStartedAt;
           postToVision({ type: 'frame', at: captureStartedAt, data: photo.base64 });
+          onFrameRef.current?.(photo.base64);
         } catch (error) {
           fail(`Camera capture failed: ${String(error)}`);
         } finally {
@@ -196,7 +207,7 @@ export function CameraMonitor({ onObservation, onTrackingDelay, onFault }: Camer
   }, [fail, reportDelay]);
 
   return (
-    <View style={styles.preview}>
+    <View style={[styles.preview, style]}>
       <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="front" pictureSize={CAPTURE_SIZE}
         onCameraReady={onCameraReady} onMountError={({ message }) => fail(message)} />
       {visionPage ? <NativeWebView
@@ -219,12 +230,13 @@ export function CameraMonitor({ onObservation, onTrackingDelay, onFault }: Camer
         onContentProcessDidTerminate={() => fail('The face model renderer stopped. Reopen the session to retry.')}
         style={styles.webview}
       /> : null}
+      {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  preview: { position: 'relative', width: '100%', aspectRatio: 4 / 3, maxHeight: 265, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.surface },
+  preview: { position: 'relative', width: '100%', aspectRatio: 3 / 4, borderRadius: 28, overflow: 'hidden', backgroundColor: colors.surface },
   webview: { position: 'absolute', top: 0, left: 0, width: 1, height: 1, opacity: 0.001, backgroundColor: 'transparent' },
 });
 

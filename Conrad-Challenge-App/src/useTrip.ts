@@ -7,12 +7,15 @@ import * as Speech from 'expo-speech';
 import { DEMO_DURATION_MS, drillObservation } from './demo';
 import { drivenMlReplays } from './drivenMl/replays';
 import { guardianGateway } from './guardian';
+import { viewFromEngine, viewFromSignal } from './liveView';
+import type { LiveCondition, LiveView } from './liveView';
 import { mlReplayWarning } from './mlReplay';
 import { cueLabel, RiskEngine } from './risk';
 import type { Coverage, Observation, RiskAlert } from './risk';
 import type { Delivery, SessionSource, Trip, TripEvent } from './trips';
+import type { VideoSender } from './guardian';
 
-type Options = SessionSource & { gps: boolean; shareLocation: boolean; linkId?: string; voice: boolean };
+type Options = SessionSource & { gps: boolean; shareLocation: boolean; linkId?: string; voice: boolean; shareVideo?: boolean };
 type SessionCoverage = Coverage | 'starting' | 'delayed';
 
 type LiveTrip = {
@@ -23,6 +26,8 @@ type LiveTrip = {
   lastAt?: number;
   location?: Location.LocationObject;
   watch?: Location.LocationSubscription;
+  video?: VideoSender;
+  lastFrameAt?: number;
 };
 
 export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, delivery: Delivery) => void) {
@@ -34,6 +39,16 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
   const [alert, setAlert] = useState<TripEvent | null>(null);
   const [fault, setFault] = useState('');
   const [gpsStatus, setGpsStatus] = useState('');
+  const [view, setViewState] = useState<LiveView | null>(null);
+  const [familyShare, setFamilyShare] = useState<'off' | 'live' | 'retrying'>('off');
+  const [videoShare, setVideoShare] = useState<'off' | 'connecting' | 'live' | 'failed'>('off');
+  const latestView = useRef<LiveView | null>(null);
+  const worst = useRef<LiveCondition>('none');
+  const setView = useCallback((next: LiveView | null) => {
+    latestView.current = next;
+    if (next && CONDITION_RANK[next.condition] > CONDITION_RANK[worst.current]) worst.current = next.condition;
+    setViewState(next);
+  }, []);
 
   useEffect(() => {
     void setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => {});
@@ -50,9 +65,24 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
     if (!state) return;
     live.current = null;
     state.watch?.remove();
+    state.video?.close();
+    setVideoShare('off');
     clearVoice();
     player.pause();
-    save({ ...state.trip, durationMs: Math.round(performance.now() - state.started), end: reason });
+    const finished = { ...state.trip, durationMs: Math.round(performance.now() - state.started), end: reason };
+    save(finished);
+    if (guardianGateway && state.options.linkId) {
+      void guardianGateway.recordTrip({
+        sessionId: finished.id,
+        startedAt: finished.startedAt,
+        durationS: Math.round(finished.durationMs / 1000),
+        driverAlerts: finished.events.filter((event) => event.level === 1).length,
+        guardianAlerts: finished.events.filter((event) => event.level === 2).length,
+        worstCondition: worst.current,
+        trackedPct: finished.samples ? Math.round(1000 * finished.trackingSamples / finished.samples) / 10 : null,
+      }).catch(() => {});
+    }
+    setFamilyShare('off');
     setRun(null);
     if (reason === 'background') setFault('Monitoring stopped when the app left the foreground.');
   }, [clearVoice, player, save]);
@@ -72,7 +102,7 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
     if (state?.options.voice) {
       voiceTimer.current = setTimeout(() => {
         if (live.current === state) {
-          Speech.speak('Attention. If needed, pull over safely.', { rate: 0.93 });
+          Speech.speak('Attention. Eyes on the road. If needed, pull over safely.', { rate: 0.93 });
         }
       }, 570);
     }
@@ -107,8 +137,18 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
     };
 
     live.current = state;
+    if (options.mode === 'camera' && options.shareVideo && options.linkId && guardianGateway) {
+      setVideoShare('connecting');
+      void guardianGateway.openVideoSender().then((sender) => {
+        if (live.current === state) { state.video = sender; setVideoShare('live'); } else sender.close();
+      }).catch(() => { if (live.current === state) setVideoShare('failed'); });
+    } else {
+      setVideoShare('off');
+    }
     setFault('');
     setAlert(null);
+    setView(null);
+    worst.current = 'none';
     setCoverage('starting');
     setGpsStatus(options.gps ? 'Waiting for GPS' : '');
     setRun(options.mode === 'camera' ? { id, mode: options.mode } : { id, mode: options.mode, scenario: options.scenario });
@@ -202,6 +242,7 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
     if (!state || sample.at < state.started || (state.lastAt !== undefined && sample.at <= state.lastAt)) return;
     const result = state.engine.update(sample);
     recordResult(state, sample.at, result.coverage, result.alerts);
+    setView(viewFromEngine(result.snapshot, result.coverage));
   }, [recordResult]);
 
   const markTrackingDelayed = useCallback((slowFrameMs?: number) => {
@@ -214,6 +255,7 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
     }
     state.engine.interruptTracking();
     setCoverage('delayed');
+    setView(viewFromEngine(state.engine.snapshot(), 'delayed'));
   }, []);
 
   useEffect(() => {
@@ -247,6 +289,7 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
         const signal = signals[index];
         const offset = (signal.t_seconds - first) * 1000;
         if (offset > elapsed) break;
+        setView(viewFromSignal(signal));
         const warning = mlReplayWarning(signal);
         recordResult(state, state.started + offset, 'tracking', warning ? [warning] : []);
         index += 1;
@@ -258,14 +301,63 @@ export function useTrip(save: (trip: Trip) => void, setDelivery: (id: string, de
     return () => clearInterval(timer);
   }, [run, end, recordResult]);
 
+  // Family live view: while a guardian link is selected, publish the model's reading every 2.5 s.
+  useEffect(() => {
+    const state = live.current;
+    if (!run || !state || !state.options.linkId || !guardianGateway) return;
+    const gateway = guardianGateway;
+    setFamilyShare('live');
+    let busy = false;
+    const publish = () => {
+      const current = live.current;
+      const shown = latestView.current;
+      if (current !== state || busy) return;
+      busy = true;
+      const fix = state.location;
+      const fresh = state.options.shareLocation && fix && Date.now() - fix.timestamp <= 30_000 &&
+        fix.coords.accuracy !== null && fix.coords.accuracy <= 100;
+      const speed = fix?.coords.speed;
+      void gateway.publishStatus({
+        sessionId: state.trip.id,
+        active: true,
+        condition: shown?.condition ?? 'none',
+        tier: shown?.tier ?? 0,
+        score: shown?.score ?? 0,
+        indicators: { tiles: (shown?.tiles ?? []).map(({ title, value, note, tone }) => ({ title, value, note, tone })), face: shown?.face ?? null },
+        speedKmh: typeof speed === 'number' && speed >= 0 ? Math.round(speed * 36) / 10 : null,
+        location: fresh ? { latitude: fix.coords.latitude, longitude: fix.coords.longitude,
+          heading: typeof fix.coords.heading === 'number' && fix.coords.heading >= 0 ? fix.coords.heading : null } : undefined,
+      }).then(() => { if (live.current === state) setFamilyShare('live'); })
+        .catch(() => { if (live.current === state) setFamilyShare('retrying'); })
+        .finally(() => { busy = false; });
+    };
+    publish();
+    const timer = setInterval(publish, 2500);
+    return () => clearInterval(timer);
+  }, [run]);
+
+  /** Forward camera frames to the family video topic, at most about three per second. */
+  const sendFrame = useCallback((jpg: string) => {
+    const state = live.current;
+    if (!state?.video) return;
+    const now = Date.now();
+    if (state.lastFrameAt !== undefined && now - state.lastFrameAt < 300) return;
+    state.lastFrameAt = now;
+    state.video.send(jpg);
+  }, []);
+
   const stopOnFault = useCallback((message: string) => {
     if (!live.current) return;
     setFault(message);
     end('fault');
   }, [end]);
 
-  return { run, alert, coverage, fault, gpsStatus, start, end, observe, markTrackingDelayed, stopOnFault, playWarning };
+  return { run, alert, view, familyShare, videoShare, sendFrame, coverage, fault, gpsStatus, start, end, observe, markTrackingDelayed, stopOnFault, playWarning };
 }
+
+const CONDITION_RANK: Record<LiveCondition, number> = {
+  none: 0, distracted: 1, drowsy: 2, possible_impairment: 3, possible_unresponsiveness: 4,
+};
 
 export function sessionStatus(coverage: SessionCoverage, event: TripEvent | null) {
   switch (coverage) {

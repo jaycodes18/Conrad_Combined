@@ -8,7 +8,7 @@ The app uses React Native and Expo SDK 58. Keep the core demo runnable in Expo G
 
 ## Repository map
 
-- `App.tsx` contains the Drive, History, and Settings screens and the active-session UI. `src/useTrip.ts` coordinates session lifecycle, audio, optional GPS, and test alert delivery.
+- `App.tsx` holds app state and picks the teen or parent shell. `src/screens/` contains the teen screens (Drive, Trips, live session), the parent screens (Home, Alerts map), Settings and the role picker. `src/liveView.ts` maps engine snapshots and Driven ML signals to the six-indicator live view. `src/useTrip.ts` coordinates session lifecycle, audio, optional GPS, and test alert delivery.
 - `src/CameraMonitor.tsx` takes sequential front-camera samples and removes temporary JPEGs. `src/visionHtml.ts` loads bundled MediaPipe Face Landmarker in a local WebView and returns timestamped face features.
 - `src/risk.ts` is the deterministic risk engine. It calibrates a neutral pose and uses elapsed time across observations to classify sustained cues. `src/demo.ts` supplies synthetic observations for parked drills.
 - `src/trips.ts` defines trip metadata and preferences. `src/GuardianScreen.tsx` handles pairing and the test inbox. `src/guardian.ts` is the optional Supabase client boundary.
